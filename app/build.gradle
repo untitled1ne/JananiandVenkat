@@ -1,0 +1,30 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.untitled1ne.deliverydefender'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.untitled1ne.deliverydefender'
+        minSdk 24
+        targetSdk 35
+        versionCode 204
+        versionName '1.0.204'
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    androidResources {
+        noCompress += ['gz']
+    }
+}
