@@ -1,0 +1,12 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
+<LinearLayout android:orientation="vertical" android:padding="20dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView android:text="Yezdi Google Bridge" android:textStyle="bold" android:textSize="26sp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<TextView android:id="@+id/status" android:text="Not connected" android:textSize="16sp" android:paddingTop="10dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<Button android:id="@+id/permissions" android:text="1. Grant Bluetooth permissions" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<Button android:id="@+id/notificationAccess" android:text="2. Enable Google Maps notification access" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<Button android:id="@+id/scan" android:text="3. Scan for Yezdi" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<LinearLayout android:id="@+id/devices" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<Button android:id="@+id/testLeft" android:text="Test TFT: LEFT in 180 m" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<Button android:id="@+id/testRight" android:text="Test TFT: RIGHT in 180 m" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<TextView android:id="@+id/log" android:textSize="13sp" android:paddingTop="16dp" android:typeface="monospace" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout></ScrollView>
