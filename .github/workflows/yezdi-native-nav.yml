@@ -1,0 +1,46 @@
+name: Yezdi Native Nav Build
+
+on:
+  push:
+    branches: [ yezdi-native-nav-build ]
+    paths:
+      - 'yezdi-native-nav/**'
+      - '.github/workflows/yezdi-native-nav.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build debug APK
+        run: gradle -p yezdi-native-nav --stacktrace assembleDebug
+
+      - name: Collect APK and Android signing tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p yezdi-native-nav/dist
+          cp yezdi-native-nav/app/build/outputs/apk/debug/app-debug.apk yezdi-native-nav/dist/YezdiNativeNav-placeholder.apk
+          cp "$HOME/.android/debug.keystore" yezdi-native-nav/dist/debug.keystore
+          APKSIGNER_JAR="$(find "$ANDROID_HOME/build-tools" -path '*/lib/apksigner.jar' | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          cp "$APKSIGNER_JAR" yezdi-native-nav/dist/apksigner.jar
+          cp "$ZIPALIGN" yezdi-native-nav/dist/zipalign
+          chmod +x yezdi-native-nav/dist/zipalign
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yezdi-native-nav-build
+          path: yezdi-native-nav/dist/*
+          if-no-files-found: error
