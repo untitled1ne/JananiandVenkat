@@ -1,0 +1,27 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.untitled1ne.yezdinav'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.untitled1ne.yezdinav"
+        minSdk 26
+        targetSdk 35
+        versionCode 7
+        versionName "0.7-native"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.google.android.gms:play-services-maps:19.0.0'
+}
