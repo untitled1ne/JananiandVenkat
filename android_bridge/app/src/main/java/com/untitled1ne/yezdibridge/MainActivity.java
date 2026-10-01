@@ -34,7 +34,8 @@ public class MainActivity extends Activity implements BleBridgeManager.Listener 
         findViewById(R.id.scan).setOnClickListener(v->scan());
         findViewById(R.id.testLeft).setOnClickListener(v->BleBridgeManager.get(this).sendNavigation(1,180,7400));
         findViewById(R.id.testRight).setOnClickListener(v->BleBridgeManager.get(this).sendNavigation(6,180,7400));
-        append("Bridge v0.1 ready. Close the official Yezdi app before scanning so it does not hold the BLE connection.");
+        append("Bridge v0.4 Maps build. Enable Google Maps notification access, close the official Yezdi app, then connect once. The bridge remembers your bike and auto-reconnects for navigation.");
+        if(BleBridgeManager.get(this).hasSavedDevice()) BleBridgeManager.get(this).connectSavedDevice();
     }
 
     private void askPermissions(){
