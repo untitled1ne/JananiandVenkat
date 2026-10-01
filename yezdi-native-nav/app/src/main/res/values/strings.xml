@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Yezdi Navigator</string>
+    <string name="maps_api_key">MAPS_KEY_PLACEHOLDER___________________</string>
+    <string name="routes_api_key">ROUTES_KEY_PLACEHOLDER_________________</string>
+</resources>
