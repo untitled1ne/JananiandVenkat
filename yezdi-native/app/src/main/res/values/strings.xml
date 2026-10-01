@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Yezdi Maps Bridge</string>
+    <string name="google_maps_key">MAPS_KEY_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</string>
+    <string name="routes_api_key">ROUTES_KEY_XXXXXXXXXXXXXXXXXXXXXXXXXXXX</string>
+</resources>
