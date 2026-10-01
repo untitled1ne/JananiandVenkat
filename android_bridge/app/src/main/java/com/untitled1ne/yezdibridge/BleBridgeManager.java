@@ -29,7 +29,12 @@ public final class BleBridgeManager {
     private final ArrayDeque<WriteOp> queue=new ArrayDeque<>();
     private boolean writeInFlight=false;
     private boolean authorized=false;
+    private boolean connectingOrConnected=false;
+    private String currentAddress=null;
     private int pendingTurn=-1,pendingDtm=-1,pendingDtd=-1;
+    private static final String PREFS="yezdi_bridge";
+    private static final String PREF_BIKE_ADDRESS="bike_address";
+    private static final String PREF_BIKE_NAME="bike_name";
 
     public static final UUID TBT_SERVICE=UUID.fromString("d6328aea-d630-4a83-b51b-1da8e8da8200");
     public static final UUID TBT_CHAR=UUID.fromString("d6328aea-d630-4a83-b51b-1da8e8da8210");
@@ -73,25 +78,73 @@ public final class BleBridgeManager {
     private void log(String s){for(Listener l:listeners) l.onLog(s);}
 
     @SuppressLint("MissingPermission")
-    public void connect(BluetoothDevice device){
-        log("Connecting to "+device.getName()+" / "+device.getAddress());
+    public synchronized void connect(BluetoothDevice device){
+        if(device==null) return;
+        String address=device.getAddress();
+        if(connectingOrConnected && address!=null && address.equals(currentAddress)){
+            log("Yezdi connection already active/in progress.");
+            return;
+        }
+        String name=device.getName();
+        log("Connecting to "+name+" / "+address);
+        context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit()
+                .putString(PREF_BIKE_ADDRESS,address)
+                .putString(PREF_BIKE_NAME,name==null?"MY YEZDI":name)
+                .apply();
+        currentAddress=address;
+        connectingOrConnected=true;
         queue.clear();
         writeInFlight=false;
         authorized=false;
-        pendingTurn=pendingDtm=pendingDtd=-1;
         if(gatt!=null){gatt.close();gatt=null;}
         gatt=device.connectGatt(context,false,callback,BluetoothDevice.TRANSPORT_LE);
+    }
+
+    @SuppressLint("MissingPermission")
+    public synchronized boolean connectSavedDevice(){
+        if(connectingOrConnected) return true;
+        String address=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+                .getString(PREF_BIKE_ADDRESS,null);
+        if(address==null || address.isEmpty()){
+            log("No remembered Yezdi yet. Open the bridge once and select your bike.");
+            return false;
+        }
+        try{
+            BluetoothManager bm=(BluetoothManager)context.getSystemService(Context.BLUETOOTH_SERVICE);
+            BluetoothAdapter adapter=bm==null?null:bm.getAdapter();
+            if(adapter==null || !adapter.isEnabled()){
+                log("Cannot auto-connect: Bluetooth is off.");
+                return false;
+            }
+            BluetoothDevice device=adapter.getRemoteDevice(address);
+            log("Auto-connecting remembered Yezdi "+address);
+            connect(device);
+            return true;
+        }catch(Exception e){
+            connectingOrConnected=false;
+            log("Auto-connect failed: "+e);
+            return false;
+        }
+    }
+
+    public boolean hasSavedDevice(){
+        String address=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+                .getString(PREF_BIKE_ADDRESS,null);
+        return address!=null && !address.isEmpty();
     }
 
     private final BluetoothGattCallback callback=new BluetoothGattCallback(){
         @Override public void onConnectionStateChange(BluetoothGatt g,int status,int newState){
             if(newState==BluetoothProfile.STATE_CONNECTED){
+                connectingOrConnected=true;
                 log("GATT connected; discovering services...");
                 for(Listener l:listeners) l.onConnected(true);
                 try{g.discoverServices();}catch(SecurityException e){log(e.toString());}
             }else if(newState==BluetoothProfile.STATE_DISCONNECTED){
+                connectingOrConnected=false;
                 log("Disconnected. status="+status);
                 queue.clear(); writeInFlight=false; authorized=false;
+                tbt=dtm=dtd=clusterPcode=mobilePcode=null;
                 for(Listener l:listeners) l.onConnected(false);
             }
         }
@@ -165,13 +218,7 @@ public final class BleBridgeManager {
 
             if(MOBILE_PCODE_CHAR.equals(c.getUuid())){
                 if(status==BluetoothGatt.GATT_SUCCESS){
-                    authorized=true;
-                    log("Yezdi protection handshake accepted. Navigation unlocked.");
-                    if(pendingTurn>=0){
-                        int a=pendingTurn,b=pendingDtm,d=pendingDtd;
-                        pendingTurn=pendingDtm=pendingDtd=-1;
-                        handler.postDelayed(()->sendNavigation(a,b,d),250);
-                    }
+                    markAuthorized("Yezdi protection handshake accepted. Navigation unlocked.");
                 }else{
                     authorized=false;
                     log("Authorization response rejected. status="+status);
@@ -282,8 +329,7 @@ public final class BleBridgeManager {
                 int r=gatt.writeCharacteristic(mobilePcode,response,type);
                 log("8620 auth submit result="+r+" type="+typeName(type)+" bytes="+hex(response));
                 if(type==BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE && r==BluetoothStatusCodes.SUCCESS){
-                    authorized=true;
-                    log("Yezdi protection response sent without callback.");
+                    markAuthorized("Yezdi protection response sent without callback.");
                 }
             }else{
                 mobilePcode.setWriteType(type);
@@ -291,12 +337,21 @@ public final class BleBridgeManager {
                 boolean ok=gatt.writeCharacteristic(mobilePcode);
                 log("8620 auth submit ok="+ok+" type="+typeName(type)+" bytes="+hex(response));
                 if(type==BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE && ok){
-                    authorized=true;
-                    log("Yezdi protection response sent without callback.");
+                    markAuthorized("Yezdi protection response sent without callback.");
                 }
             }
         }catch(Exception e){
             log("8620 auth write failed: "+e);
+        }
+    }
+
+    private synchronized void markAuthorized(String message){
+        authorized=true;
+        log(message);
+        if(pendingTurn>=0){
+            int a=pendingTurn,b=pendingDtm,d=pendingDtd;
+            pendingTurn=pendingDtm=pendingDtd=-1;
+            handler.postDelayed(()->sendNavigation(a,b,d),220);
         }
     }
 
@@ -312,8 +367,13 @@ public final class BleBridgeManager {
     }
 
     public synchronized void sendNavigation(int turnCode,int metersToTurn,int metersToDestination){
+        // Always retain only the newest navigation state. Google Maps updates frequently.
         if(gatt==null||tbt==null||dtm==null||dtd==null){
-            log("Not ready: connect to bike first.");
+            pendingTurn=turnCode;
+            pendingDtm=metersToTurn;
+            pendingDtd=metersToDestination;
+            log("Navigation buffered while Yezdi connects: turn="+turnCode+" DTM="+metersToTurn+"m");
+            connectSavedDevice();
             return;
         }
 
