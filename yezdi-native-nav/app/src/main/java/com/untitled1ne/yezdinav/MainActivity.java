@@ -428,7 +428,7 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
             Class<?> li=Class.forName("com.untitled1ne.yezdibridge.BleBridgeManager$Listener");
             bleAddListener=cls.getDeclaredMethod("addListener",li);bleAddListener.setAccessible(true);
             bleRemoveListener=cls.getDeclaredMethod("removeListener",li);bleRemoveListener.setAccessible(true);
-            bleListenerProxy=Proxy.newProxyInstance(li.getClassLoader(),new Class[]{li},(proxy,method,args)->{
+            bleListenerProxy=java.lang.reflect.Proxy.newProxyInstance(li.getClassLoader(),new Class[]{li},(proxy,method,args)->{
                 if("onConnected".equals(method.getName())&&args!=null&&args.length>0){
                     boolean yes=(Boolean)args[0]; runOnUiThread(()->setBikeConnected(yes));
                 } else if("onLog".equals(method.getName())&&args!=null&&args.length>0){
@@ -527,7 +527,7 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
 
     @Override protected void onResume(){super.onResume();mapView.onResume();}
     @Override protected void onPause(){mapView.onPause();super.onPause();}
-    @Override protected void onLowMemory(){super.onLowMemory();mapView.onLowMemory();}
+    @Override public void onLowMemory(){super.onLowMemory();mapView.onLowMemory();}
     @Override protected void onDestroy(){
         try{if(locationManager!=null)locationManager.removeUpdates(this);}catch(Exception ignored){}
         try{if(bleRemoveListener!=null&&bleManager!=null&&bleListenerProxy!=null)bleRemoveListener.invoke(bleManager,bleListenerProxy);}catch(Exception ignored){}
